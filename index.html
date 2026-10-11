@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Voksen-julekalenderen</title>
+<style>
+:root{--bg:#14301f;--card:#1d4a2e;--red:#c8312f;--gold:#f2c14e;--ink:#fdf6e3;--mute:#a9c4b0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,'Times New Roman',serif;min-height:100%}
+header{text-align:center;padding:20px 16px 8px}
+h1{margin:0;font-size:26px;color:var(--gold)}
+.sub{color:var(--mute);font-size:14px;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 16px}
+.door{aspect-ratio:1;border:2px solid var(--gold);border-radius:12px;background:var(--red);color:var(--ink);font:700 24px Georgia,serif;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.door small{font-size:11px;font-weight:400;margin-top:2px}
+.door.locked{background:var(--card);border-color:#3b6b4c;color:var(--mute);cursor:default}
+.door.done{background:var(--gold);color:#3a2a00}
+.foot{text-align:center;padding:8px 16px 28px;color:var(--mute);font-size:14px}
+.foot label{display:inline-flex;gap:8px;align-items:center;margin-top:8px}
+#m{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end}
+#m.on{display:flex}
+.sheet{background:#fdf6e3;color:#2a1a10;width:100%;max-height:92%;overflow:auto;border-radius:20px 20px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet h2{margin:0 0 4px;color:var(--red);font-size:22px}
+.sheet p{font-size:18px;line-height:1.45}
+input{width:100%;font:18px Georgia,serif;padding:12px;border:2px solid #b9a98a;border-radius:10px;background:#fff;color:#2a1a10}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+button{font:600 16px Georgia,serif;padding:12px 16px;border-radius:10px;border:0;cursor:pointer}
+.go{background:var(--red);color:#fff;flex:1}
+.alt{background:#e8dcc0;color:#2a1a10}
+#msg{margin-top:12px;font-size:17px;min-height:24px}
+</style>
+</head>
+<body>
+<header><h1>🎄 Voksen-julekalenderen</h1><div class="sub" id="sub"></div></header>
+<div class="grid" id="g"></div>
+<div class="foot"><div id="score"></div><label><input type="checkbox" id="t" style="width:auto"> Prøvetilstand (åbn alle låger)</label></div>
+<div id="m"><div class="sheet" id="s"></div></div>
+<script>
+const P=[
+["Julemandens sække","Julemanden har tre sække. Den første har 12 gaver, den anden har dobbelt så mange som den første, og den tredje har 6 færre end den anden. Hvor mange gaver har han i alt?",["54"],"Sæk 2 er 24."],
+["Gåden om hullet","Jo mere jeg tager, jo større bliver jeg. Hvad er jeg?",["hul","et hul"],"Tænk på en skovl."],
+["Tilbudsjagten","Et juletræ koster 300 kr. Først sættes prisen 20 % ned, og dagen efter sættes den nye pris 10 % op. Hvad koster træet nu?",["264","264 kr"],"Det er ikke 300 kr. igen."],
+["Nåle uden syning","Jeg har nåle, men kan ikke sy. Jeg bliver pyntet, men er ingen brud. Hvad er jeg?",["juletræ","gran","grantræ","træ","et juletræ"],"Står i stuen i december."],
+["Nissernes alder","Tre nisser er tilsammen 60 år. Den mellemste er 18, og den ældste er dobbelt så gammel som den yngste. Hvor gammel er den yngste?",["14","14 år"],"y + 18 + 2y = 60."],
+["Det man kan fange","Hvad kan du fange, men ikke kaste?",["forkølelse","en forkølelse","snue","en snue"],"Typisk i december."],
+["Gavepapir","Én rulle gavepapir rækker til 4 gaver. Du har 30 gaver. Hvor mange ruller skal du mindst købe?",["8","8 ruller"],"7,5 ruller findes ikke i butikken."],
+["Vådt og tørt","Hvad bliver vådere, jo mere det tørrer?",["håndklæde","et håndklæde","håndklæ"],"Hænger på badeværelset."],
+["Lågernes sum","Hvad er summen af alle tallene fra 1 til 24, altså alle lågerne i kalenderen?",["300"],"Par 1+24, 2+23 ... hvor mange par?"],
+["Nissen i brønden","En nisse kravler op ad en 10 meter høj stige. Om dagen kravler han 3 meter op, om natten glider han 2 meter ned. Hvilken dag når han toppen?",["8","dag 8","8. dag","8 dage"],"Den sidste dag glider han ikke ned igen."],
+["Tangenter","Jeg har nøgler, men kan ikke åbne en eneste lås. Hvad er jeg?",["klaver","et klaver","piano","et piano"],"Står gerne og samler støv, indtil julesangene skal spilles."],
+["Julefrokosten","Der er 5 gæster til julefrokost. Alle klinker skåler med alle andre præcis én gang. Hvor mange klink bliver det i alt?",["10","10 klink"],"5 × 4 / 2."],
+["Uden mund","Jeg taler uden mund og hører uden ører. Jeg har ingen krop, men vågner til live med vinden. Hvad er jeg?",["ekko","et ekko"],"Råb i et bjerg."],
+["Julekuglerne","En rød julekugle koster 5 kr. mere end en blå. Sammen koster de 25 kr. Hvad koster den blå?",["10","10 kr"],"Det er ikke 5 kr, hvis du tænker hurtigt."],
+["Talrækken","2, 6, 12, 20, 30, ... Hvad er det næste tal?",["42"],"Forskellene vokser."],
+["Uden huse","Jeg har byer, men ingen huse. Skove, men ingen træer. Vand, men ingen fisk. Hvad er jeg?",["kort","et kort","landkort","et landkort"],"Du bruger mig, når du skal finde vej til svigerforældrene."],
+["Rensdyrenes fodring","Julemandens 9 rensdyr får hver 2,5 kg gulerødder om dagen. Hvor mange kilo gulerødder skal der bruges på 4 dage?",["90","90 kg"],"9 × 2,5 × 4."],
+["Ordbogens fejl","Hvilket ord står altid forkert stavet i ordbogen?",["forkert","ordet forkert"],"Læs spørgsmålet igen."],
+["Kalenderkneb","Hvis 1. december er en søndag, hvilken ugedag er så den 24. december?",["tirsdag"],"23 dage senere. 23 = 3 × 7 + 2."],
+["Nisserækken","På hvor mange forskellige måder kan 4 nisser stille sig op på en række?",["24"],"4 × 3 × 2 × 1."],
+["Hoved uden krop","Jeg har et hoved og en hale, men ingen krop. Hvad er jeg?",["mønt","en mønt"],"Bruges til at slå plat eller krone."],
+["Gløggen","Gløgg blandes af 3 dele rødvin og 1 del saft. Du skal lave 2 liter. Hvor mange centiliter rødvin skal du bruge?",["150","150 cl"],"2 liter = 200 cl."],
+["Frugtæskerne","Tre æsker hedder 'æbler', 'appelsiner' og 'blandet', men ALLE mærkater er forkerte. Du trækker en frugt op af æsken mærket 'blandet' og får et æble. Hvad er der i æsken mærket 'appelsiner'?",["blandet","blandede","en blanding"],"Æsken mærket 'blandet' er kun æbler."],
+["Glædelig jul!","Hvilket bogstav optræder to gange i et øjeblik, én gang i et minut og aldrig i tusind år?",["m","bogstavet m"],"Tæl bogstaverne i ordene."]
+];
+const g=document.getElementById('g'),m=document.getElementById('m'),s=document.getElementById('s');
+let solved={},test=false;
+try{solved=JSON.parse(localStorage.getItem('jk')||'{}')}catch(e){}
+function save(){try{localStorage.setItem('jk',JSON.stringify(solved))}catch(e){}}
+function open_(d){const n=new Date(),mo=n.getMonth(),dd=n.getDate();return test||n.getFullYear()>2026||(mo===11&&dd>=d)}
+function norm(v){return v.toLowerCase().trim().replace(/[.!?]/g,'').replace(/^(en|et|bogstavet|ordet|den)\s+/,'').replace(/\s+/g,' ')}
+function render(){
+g.innerHTML='';let c=0;
+for(let i=1;i<=24;i++){
+const b=document.createElement('button');const o=open_(i),dn=solved[i];if(dn)c++;
+b.className='door '+(dn?'done':o?'':'locked');
+b.innerHTML=i+'<small>'+(dn?'✓ løst':o?'åbn':'🔒')+'</small>';
+if(o)b.onclick=()=>show(i);g.appendChild(b)}
+document.getElementById('score').textContent='Løst: '+c+' af 24 låger';
+const n=new Date();document.getElementById('sub').textContent=(n.getMonth()===11||test)?'En opgave til dig hver dag frem til jul':'Lågerne åbner fra 1. december'}
+function show(i){
+const p=P[i-1];
+s.innerHTML='<h2>'+i+'. december – '+p[0]+'</h2><p>'+p[1]+'</p><input id="a" placeholder="Dit svar" autocomplete="off" autocapitalize="off"><div class="row"><button class="go" id="ck">Tjek svar</button><button class="alt" id="hn">Hint</button><button class="alt" id="gu">Giv op</button><button class="alt" id="cl">Luk</button></div><div id="msg"></div>';
+const msg=document.getElementById('msg'),inp=document.getElementById('a');
+if(solved[i]){msg.textContent='🎉 Allerede løst! Svar: '+p[2][0]}
+const chk=()=>{if(p[2].includes(norm(inp.value))){solved[i]=1;save();msg.textContent='🎉 Rigtigt! Godt klaret – glædelig jul!';render()}else msg.textContent='Næsten – prøv igen 🤔'};
+document.getElementById('ck').onclick=chk;
+inp.onkeydown=e=>{if(e.key==='Enter')chk()};
+document.getElementById('hn').onclick=()=>msg.textContent='💡 '+p[3];
+document.getElementById('gu').onclick=()=>msg.textContent='Svaret er: '+p[2][0];
+document.getElementById('cl').onclick=()=>m.classList.remove('on');
+m.classList.add('on')}
+m.onclick=e=>{if(e.target===m)m.classList.remove('on')};
+document.getElementById('t').onchange=e=>{test=e.target.checked;render()};
+render();
+</script>
+</body>
+</html>
